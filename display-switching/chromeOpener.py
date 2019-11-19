@@ -1,4 +1,7 @@
 # https://basketdeveloper.tistory.com/48
+# https://pkgs.org/download/chromium-chromedriver
+# https://cinnamonapple.tistory.com/18
+# https://notejb.blogspot.com/2019/01/blog-post_2.html
 
 import sys
 from selenium import webdriver
