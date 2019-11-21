@@ -41,6 +41,8 @@ while True:
     frame = cv2.resize(frame, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_AREA)
 
     cv2.imshow("frame", frame)
+#	cv2.namedWindow('frame', cv2.WND_PROP_FULLSCREEN)
+#	cv2.setWindowProperty('frame', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     if cv2.waitKey(1) & 0xFF == 27:
         break
