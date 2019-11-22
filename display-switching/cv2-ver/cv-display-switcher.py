@@ -4,14 +4,14 @@ import signal
 flag = 0
 
 # default
-cap = cv2.VideoCapture('normal_blur.gif')
+cap = cv2.VideoCapture('normal_origin.gif')
 
 def signalHappyFaceHandler(signum, frame):
     print(signum)
     global flag
     global cap
 
-    cap = cv2.VideoCapture('happy_blur.gif')
+    cap = cv2.VideoCapture('happy_origin.gif')
     flag = 1
 
 def signalDefaultFaceHandler(signum, frame):
@@ -19,7 +19,7 @@ def signalDefaultFaceHandler(signum, frame):
     global flag
     global cap
 
-    cap = cv2.VideoCapture('normal_blur.gif')
+    cap = cv2.VideoCapture('normal_origin.gif')
     flag = 0
 
 signal.signal(signal.SIGUSR1, signalHappyFaceHandler)
@@ -33,9 +33,9 @@ while True:
 
     if not ret:
         if flag == 0:
-            cap = cv2.VideoCapture('normal_blur.gif')
+            cap = cv2.VideoCapture('normal_origin.gif')
         elif flag == 1:
-            cap = cv2.VideoCapture('happy_blur.gif')
+            cap = cv2.VideoCapture('happy_origin.gif')
         ret, frame = cap.read()
 
     frame = cv2.resize(frame, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_AREA)
