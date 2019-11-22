@@ -38,7 +38,7 @@ while True:
             cap = cv2.VideoCapture('happy_origin.gif')
         ret, frame = cap.read()
 
-    frame = cv2.resize(frame, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_AREA)
+#    frame = cv2.resize(frame, None, fx=0.3, fy=0.3, interpolation=cv2.INTER_AREA)
 
     cv2.imshow("frame", frame)
 #	cv2.namedWindow('frame', cv2.WND_PROP_FULLSCREEN)

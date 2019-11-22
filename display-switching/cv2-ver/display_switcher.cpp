@@ -7,14 +7,16 @@ int main(int argc, char *argv[]){
     while(true){
         scanf("%d", &signum);
         if (signum==1){
-            // to main
-            system("ps | grep cv-display-switcher.py | awk 'NR<2{print $1}' | xargs kill -30");
+            // to happy
+            system("ps | grep cv-display-switcher.py | awk 'NR<2{print $1}'
+					| xargs kill -10");
         }else if(signum==2){
-            // to map
-            system("ps | grep cv-display-switcher.py | awk 'NR<2{print $1}' | xargs kill -31");
+            // to normal
+            system("ps | grep cv-display-switcher.py | awk 'NR<2{print $1}'
+					| xargs kill -12");
         }else if(signum==3){
             // to map
-            system("ps | grep cv-display-switcher.py | awk 'NR<2{print $1}' | xargs kill -29");
+            // system("ps | grep cv-display-switcher.py | awk 'NR<2{print $1}' | xargs kill -29");
         }else {
             printf("^^ㅗ\n");
             break;
