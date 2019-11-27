@@ -36,12 +36,6 @@ gestname = ""
 path = ""
 mod = 0
 
-banner =  '''\nWhat would you like to do ?
-    1- Use pretrained model for gesture recognition & layer visualization
-    2- Train the model (you will require image samples for training under .\imgfolder)
-    3- Visualize feature maps of different layers of trained model
-    '''
-
 def saveROIImg(img):
     global counter, gestname, path, saveImg
     if counter > (numOfSamples - 1):
@@ -83,7 +77,7 @@ def skinMask(frame, x0, y0, width, height ):
     # color to grayscale
     res = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
 
-    guess_res = "Skin"
+    guess_res = "^______^Skin"
 
     if saveImg == True:
         saveROIImg(res)
@@ -148,7 +142,6 @@ def Main():
     fy = 355
     fh = 18
 
-    #Call CNN model loading callback
     mod = myNN.loadCNN(0)
 
     import os
@@ -166,7 +159,7 @@ def Main():
         global cap
 
         cap = cv2.VideoCapture(0)
-        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)  # Set Camera Size
+        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "CAM"
 
     # MAC : SIGINFO 29
@@ -176,7 +169,7 @@ def Main():
         global cap
 
         cap = cv2.VideoCapture('map.gif')
-        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)  # Set Camera Size
+        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "MAP"
 
     # MAC : SIGUSR1 30
@@ -186,7 +179,7 @@ def Main():
         global cap
 
         cap = cv2.VideoCapture('smile_glow.gif')
-        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)  # Set Camera Size
+        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "SMILE"
 
     # MAC : SIGUSR2 31
@@ -196,13 +189,15 @@ def Main():
         global cap
 
         cap = cv2.VideoCapture('normal_glow.gif')
-        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)  # Set Camera Size
+        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "NORMAL"
 
     signal.signal(signal.SIGPROF, signalCameraOnHandler)
     signal.signal(signal.SIGINFO, signalMapHandler)
     signal.signal(signal.SIGUSR1, signalSmileFaceHandler)
     signal.signal(signal.SIGUSR2, signalDefaultFaceHandler)
+
+    thumbs_up_guess_stack = 0
 
     while True:
         ret, frame = cap.read()
@@ -235,8 +230,14 @@ def Main():
                 else:
                     roi, guess_res = skinMask(frame, x0, y0, width, height)
 
+
+            if guess_res.split()[0] == "PEACE":
+                thumbs_up_guess_stack += 1
+            else:
+                thumbs_up_guess_stack = 0
+
             # print GUESS
-            cv2.putText(frame, guess_res, (fx, fy), font, 1, (0, 0, 255), 2, 1)
+            cv2.putText(frame, str(thumbs_up_guess_stack) + " " + guess_res, (fx, fy), font, 1, (0, 0, 255), 2, 1)
             cv2.putText(frame, "Show Thumbs-Up on TONY's hat camera!", (fx, fy + fh), font, size, (0, 0, 255), 1, 1)
 
 
@@ -248,6 +249,11 @@ def Main():
 
         elif img_flag == "MAP":
             cap = cv2.VideoCapture('map.gif')
+
+
+        if thumbs_up_guess_stack >= 7:
+            os.system("kill -30 "+str(os.getpid()))
+            thumbs_up_guess_stack = 0
 
         cv2.imshow('Original', frame)
 
