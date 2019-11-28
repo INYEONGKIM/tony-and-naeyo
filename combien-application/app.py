@@ -79,35 +79,35 @@ def skinMask(frame, x0, y0, width, height ):
     
     #bitwise and mask original frame
     res = cv2.bitwise_and(roi, roi, mask = mask)
-    
+
     # color to grayscale
     res = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-    
+
     guess_res = "^______^Skin"
-    
+
     if saveImg == True:
         saveROIImg(res)
 
     elif guessGesture == True:
         retgesture, guess_res  = myNN.guessGesture(mod, res)
-        
+
         if lastgesture != retgesture:
             lastgesture = retgesture
             print myNN.output[lastgesture]
             time.sleep(0.01 )
-#guessGesture = False
+            #guessGesture = False
 
-elif visualize == True:
-    layer = int(raw_input("Enter which layer to visualize "))
-    cv2.waitKey(0)
-    myNN.visualizeLayers(mod, res, layer)
-    visualize = False
+    elif visualize == True:
+        layer = int(raw_input("Enter which layer to visualize "))
+        cv2.waitKey(0)
+        myNN.visualizeLayers(mod, res, layer)
+        visualize = False
     
     
     return res, guess_res
 
 def binaryMask(frame, x0, y0, width, height):
-    
+
     global guessGesture, visualize, mod, lastgesture, saveImg
     
     cv2.rectangle(frame, (x0,y0),(x0+width,y0+height),(0,255,0),1)
@@ -115,27 +115,27 @@ def binaryMask(frame, x0, y0, width, height):
     
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray,(5,5),2)
-    
-    th3 = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,11,2)
+   
+    th3 = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,11,2)
     ret, res = cv2.threshold(th3, minValue, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
-    
+
     guess_res = "Bin"
-    
+
     if saveImg == True:
         saveROIImg(res)
 
     elif guessGesture == True:
         retgesture, guess_res = myNN.guessGesture(mod, res)
-        
+
         if lastgesture != retgesture:
             lastgesture = retgesture
 
-elif visualize == True:
-    layer = int(raw_input("Enter which layer to visualize "))
-    cv2.waitKey(1)
-    myNN.visualizeLayers(mod, res, layer)
-    visualize = False
-    
+    elif visualize == True:
+        layer = int(raw_input("Enter which layer to visualize "))
+        cv2.waitKey(1)
+        myNN.visualizeLayers(mod, res, layer)
+        visualize = False
+
     return res, guess_res
 
 def Main():
@@ -146,7 +146,7 @@ def Main():
     fx = 10
     fy = 355
     fh = 18
-    
+
     #Call CNN model loading callback
     while True:
         # ans = int(raw_input(banner))
@@ -177,146 +177,148 @@ def Main():
             print "Get out of here!!!"
             return 0
 
-import os
+    import os
     print os.getpid()
-    
+
     ## Grab camera input
-    cv2.namedWindow('Original', cv2.WINDOW_NORMAL)  # Set Camera Size
-    
+    cv2.namedWindow('Original', cv2.WND_PROP_FULLSCREEN)  # Set Camera Size, cv2.WINDOW_NORMAL
+    cv2.setWindowProperty('Original', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
     import signal
-    
+
     # MAC : SIGPROF 27
     def signalCameraOnHandler(signum, frame):
         print signum
         global img_flag
         global cap
-        
+
         cap = cv2.VideoCapture(0)
         cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "CAM"
-    
+
     # MAC : SIGINFO 29
     def signalMapHandler(signum, frame):
         print signum
         global img_flag
         global cap
-        
+
         cap = cv2.VideoCapture('map.gif')
         cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "MAP"
-    
+
     # MAC : SIGUSR1 30
     def signalSmileFaceHandler(signum, frame):
         print signum
         global img_flag
         global cap
-        
+
         cap = cv2.VideoCapture('smile_glow.gif')
         cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "SMILE"
-    
+
     # MAC : SIGUSR2 31
     def signalDefaultFaceHandler(signum, frame):
         print signum
         global img_flag
         global cap
-        
+
         cap = cv2.VideoCapture('normal_glow.gif')
         cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
         img_flag = "NORMAL"
-    
+
     # Set Signal
     signal.signal(signal.SIGPROF, signalCameraOnHandler)
     signal.signal(signal.SIGINFO, signalMapHandler)
     signal.signal(signal.SIGUSR1, signalSmileFaceHandler)
     signal.signal(signal.SIGUSR2, signalDefaultFaceHandler)
-    
+
     reset_flag = False
-    
+
     thumbs_up_guess_stack = 0
     smile_face_stack = 0
     camera_page_stack = 0
     map_page_stack = 0
-    
+
     while True:
         ret, frame = cap.read()
-        
+
         # for end of gif
         if not ret:
             if img_flag == "NORMAL":
                 cap = cv2.VideoCapture('normal_glow.gif')
                 cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
-            
+
             elif img_flag == "SMILE":
                 cap = cv2.VideoCapture('smile_glow.gif')
                 cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
-            
+
             elif img_flag == "MAP":
                 cap = cv2.VideoCapture('map.gif')
                 cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
-            
+
             ret, frame = cap.read()
-    
+
         if img_flag == "CAM":
             camera_page_stack += 1
-            
+
             frame = cv2.flip(frame, 3)
-            
+
             guess_res = ":)"
-            
+
             if ret:
                 if binaryMode: # on
                     roi, guess_res = binaryMask(frame, x0, y0, width, height)
                 else:
                     roi, guess_res = skinMask(frame, x0, y0, width, height)
-        
+
+
             # detact thumbs-up frame
-            if guess_res.split()[0] == "OK":
+            if guess_res.split()[0] == "PEACE" or guess_res.split()[0] == "OK":
+                camera_page_stack -= 1
                 thumbs_up_guess_stack += 1
-else:
-    thumbs_up_guess_stack = 0
-        
-        # print GUESS
-        cv2.putText(frame, str(thumbs_up_guess_stack) + " " + guess_res, (fx, fy), font, 1, (0, 0, 255), 2, 1)
-        cv2.putText(frame, "Show Thumbs-Up on TONY's hat camera!", (fx, fy + fh), font, size, (0, 0, 255), 1, 1)
-        
-        
+            else:
+                thumbs_up_guess_stack = 0
+
+            # print GUESS
+            cv2.putText(frame, str(thumbs_up_guess_stack) + " " + guess_res, (fx, fy), font, 1, (0, 0, 255), 2, 1)
+            cv2.putText(frame, "Show Thumbs-Up on TONY's hat camera!", (fx, fy + fh), font, size, (0, 0, 255), 1, 1)
+
+
         elif img_flag == "SMILE":
             smile_face_stack += 1
-            
+
             cap = cv2.VideoCapture('smile_glow.gif')
-        
+
         elif img_flag == "NORMAL":
             cap = cv2.VideoCapture('normal_glow.gif')
 
-    elif img_flag == "MAP":
-        map_page_stack += 1
+        elif img_flag == "MAP":
+            map_page_stack += 1
             cap = cv2.VideoCapture('map.gif')
-        
-        
-        
+
+
         # for signal call
         if thumbs_up_guess_stack >= 6:
             # paging to smile
             os.system("kill -30 "+str(os.getpid()))
             reset_flag = True
 
-if smile_face_stack >= 30:
-    # paging to map
-    os.system("kill -29 "+str(os.getpid()))
-    reset_flag = True
-        
+        if smile_face_stack >= 30:
+            # paging to map
+            os.system("kill -29 "+str(os.getpid()))
+            reset_flag = True
+
         if camera_page_stack >= 150:
             # paging to map
             os.system("kill -29 "+str(os.getpid()))
             reset_flag = True
 
-    # now threshold == 300
-    if map_page_stack >= 300:
-        # paging to camera
-        os.system("kill -27 " + str(os.getpid()))
-        reset_flag = True
-        
+        # now threshold == 300
+        if map_page_stack >= 200:
+            # paging to camera
+            os.system("kill -27 " + str(os.getpid()))
+            reset_flag = True
+
         if reset_flag:
             thumbs_up_guess_stack = 0
             smile_face_stack = 0
@@ -324,13 +326,12 @@ if smile_face_stack >= 30:
             map_page_stack = 0
             reset_flag = False
 
+        cv2.imshow('Original', frame)
 
-cv2.imshow('Original', frame)
+        key = cv2.waitKey(10) & 0xff
+        if key == 27:
+            break
 
-key = cv2.waitKey(10) & 0xff
-if key == 27:
-    break
-    
     #Realse & destroy
     cap.release()
     cv2.destroyAllWindows()
