@@ -6,8 +6,32 @@ import random
 import cv2
 import time
 import numpy as np
+import pyrealsense2 as rs
+
+# for realsense
+def getVerticalCoordinate(y,distance):
+    # realsense RGB : FOV 60.4 x 42.5 x 77 (H V D)
+    # realsense Depth : FOV 73 x 58 x 95 (H V D)
+    VFov2 = math.radians(42.5 / 2)
+    VSize = math.tan(VFov2) * 2
+    Vcenter = (height -1 ) /2 
+    VPixel = VSize/(height - 1)
+    VRatio = (VCenter - y) * VPixel
+    return distance * VRatio
+
+def getHorizontalCoordinate(x, distance):
+    # realsense RGB : FOV 60.4 x 42.5 x 77 (H V D)
+    # realsense Depth : FOV 73 x 58 x 95 (H V D)
+    HFov2 = math.radians(69.4 / 2)
+    HSize = math.tan(HFov2) * 2
+    Hcenter = (width -1 ) /2 
+    HPixel = HSize/(width - 1)
+    HRatio = (x - width) * HPixel
+    return distance * HRatio   
 
 
+
+# for darknet
 def sample(probs):
     s = sum(probs)
     probs = [a/s for a in probs]
@@ -165,13 +189,21 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
 
 
 if __name__ == "__main__":
-    # load video here
-    cap = cv2.VideoCapture(3)
-    ret, img = cap.read()
-    fps = cap.get(cv2.CAP_PROP_FPS)
 
+    # for realsense
+    pipeline =rs.pipeline()
+    config =rs.config()
+    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8,30)
+
+    pipeline.start(config)
+    # for realsense
+
+    # # load video here
+    # cap = cv2.VideoCapture(3)
+    # ret, img = cap.read()
+    # fps = cap.get(cv2.CAP_PROP_FPS)
     # print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
-
     # net = load_net("cfg/your_config.cfg", "your_weights.weights", 0)
     # net = load_net("./cfg/yolov3.cfg", "/home/nvidia/catkin_ws/src/darknet_ros/darknet_ros/yolo_network_config/weights/yolov3.weights", 0)
 
@@ -184,17 +216,38 @@ if __name__ == "__main__":
             self.y_idx = y_idx
             self.depth = depth
 
+    try:
+        cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+        
+        while True:
+            # ret, img = cap.read()
 
-    cv2.namedWindow("img", cv2.WINDOW_NORMAL)
-    while(1):
-        ret, img = cap.read()
-        if ret:
-            # r = detect_np(net, meta, img)
+            # for realsense
+            frames = pipeline.wait_for_frames()            
 
-            # detected_person_info = [depth, x, y]
-            # detected_person_info = [100, -1, -1]
+            # if ret:
+            # r = detect(net, meta, img)
 
-            r = detect(net, meta, img)
+            #Depth Matching based RGB CODE
+            align_to = rs.stream.color
+            align = rs.align(align_to)
+            aligned_frames = align.process(frames)
+
+            depth_frame = frames.get_depth_frame()
+            color_frame = frames.get_color_frame()
+
+            r = detect(net, meta, np.asanyarray(color_frame.get_data()))
+
+            if not depth_frame or not color_frame:
+                continue
+
+            img = np.asanyarray(color_frame.get_data())
+            depth_image = img
+            # color_image = np.asanyarray(color_frame.get_data())
+
+            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+
+            # images = np.hstack((color_image, depth_colormap))
 
             detected_people_list = []
 
@@ -204,16 +257,60 @@ if __name__ == "__main__":
                     xmin, ymin, xmax, ymax = convertBack(float(x), float(y), float(w), float(h))
                     pt1 = (xmin, ymin)
                     pt2 = (xmax, ymax)
+
+                    # # for realsense
+                    bbox =  (xmin, ymin, xmax, ymax)
+
+                    # for realsense
+                    aligned_depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
+                    color_frame = aligned_frames.get_color_frame()
+
+                    # Validate that both frames are valid
+                    if not aligned_depth_frame or not color_frame:
+                        continue
+
+                    depth_image = np.asanyarray(aligned_depth_frame.get_data())
+                    # color_image = np.asanyarray(color_frame.get_data())
+
+                    # Render images
+                    # depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+                    # images = np.hstack((color_image, depth_colormap))
+                    
+                    # ###measure the Depth
+                    # cv2.circle(images,(300,300),5,(0,0,255),-1)
+                    # cv2.rectangle(images, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 2)
+
+                    #measuring Bouding BOX distance
+                
+                    distance = depth_image[bbox[0]:bbox[2]+1, bbox[1]:bbox[3]+1].sum()/((bbox[3]-bbox[1])*(bbox[2]-bbox[0]))
+                    distance = round(distance/1000,2)
+                    # for realsense
+
+
+
+                    # # cv2.circle(images, (300,300), 5, (0,0,255), -1)
+
+                    # print depth_frame.get_distance(300,300)
+
+                    # cv2.namedWindow('RS', cv2.WINDOW_AUTOSIZE)
+                    # cv2.imshow('RealSense', images)
+
+
                     cv2.rectangle(img, pt1, pt2, (0, 255, 0), 2)
                     # cv2.putText(img, i[0].decode() + " [" + str(round(i[1] * 100, 2)) + "]", (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
                     cv2.putText(img, i[0].decode(), (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
-                    
-                    detected_people_list.append(detected_person(x_idx=int((xmax-xmin)/2), y_idx=int((ymax-ymin)/2), depth=1))
+
+                    detected_people_list.append(detected_person(x_idx=int((xmax-xmin)/2), y_idx=int((ymax-ymin)/2), depth=distance))
             
-            if detected_people_list!=[]:
+
+            if detected_people_list != []:
                 detected_people_list.sort(key=lambda d:d.depth)
-                print detected_people_list[0].x_idx, detected_people_list[0].y_idx, detected_people_list[0].depth
+                print "x_center_idx =", detected_people_list[0].x_idx, " y_center_idx = ", detected_people_list[0].y_idx, " distance = ", detected_people_list[0].depth
             
             cv2.imshow("img", img)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    
+    finally :
+        pipeline.stop()
