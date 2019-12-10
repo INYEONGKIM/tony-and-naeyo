@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 from ctypes import *
 import math
 import random
@@ -49,7 +51,7 @@ class METADATA(Structure):
 
 
 #lib = CDLL("/home/pjreddie/documents/darknet/libdarknet.so", RTLD_GLOBAL)
-lib = CDLL("/home/nvidia/Desktop/darknet/libdarknet.so", RTLD_GLOBAL)
+lib = CDLL("./libdarknet.so", RTLD_GLOBAL)
 lib.network_width.argtypes = [c_void_p]
 lib.network_width.restype = c_int
 lib.network_height.argtypes = [c_void_p]
@@ -166,29 +168,52 @@ if __name__ == "__main__":
     # load video here
     cap = cv2.VideoCapture(3)
     ret, img = cap.read()
-    # fps = cap.get(cv2.CAP_PROP_FPS)
-    # print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
-    
-    net = load_net("/home/nvidia/catkin_ws/src/darknet_ros/darknet_ros/yolo_network_config/cfg/yolov2-tiny-voc.cfg", "/home/nvidia/catkin_ws/src/darknet_ros/darknet_ros/yolo_network_config/weights/yolov2-tiny-voc.weights", 0)
-    
-    # error in data
-    meta = load_meta("/home/nvidia/Desktop/darknet/cfg/voc.data")
-    cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+    fps = cap.get(cv2.CAP_PROP_FPS)
 
+    # print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
+
+    # net = load_net("cfg/your_config.cfg", "your_weights.weights", 0)
+    # net = load_net("./cfg/yolov3.cfg", "/home/nvidia/catkin_ws/src/darknet_ros/darknet_ros/yolo_network_config/weights/yolov3.weights", 0)
+
+    net = load_net("/home/nvidia/catkin_ws/src/darknet_ros/darknet_ros/yolo_network_config/cfg/yolov3.cfg", "/home/nvidia/catkin_ws/src/darknet_ros/darknet_ros/yolo_network_config/weights/yolov3.weights", 0)
+    meta = load_meta("./cfg/coco.data")
+
+    class detected_person:
+        def __init__(self, x_idx, y_idx, depth):
+            self.x_idx = x_idx
+            self.y_idx = y_idx
+            self.depth = depth
+
+
+    cv2.namedWindow("img", cv2.WINDOW_NORMAL)
     while(1):
         ret, img = cap.read()
         if ret:
             # r = detect_np(net, meta, img)
+
+            # detected_person_info = [depth, x, y]
+            # detected_person_info = [100, -1, -1]
+
             r = detect(net, meta, img)
 
+            detected_people_list = []
+
             for i in r:
-                x, y, w, h = i[2][0], i[2][1], i[2][2], i[2][3]
-                xmin, ymin, xmax, ymax = convertBack(float(x), float(y), float(w), float(h))
-                pt1 = (xmin, ymin)
-                pt2 = (xmax, ymax)
-                cv2.rectangle(img, pt1, pt2, (0, 255, 0), 2)
-                cv2.putText(img, i[0].decode() + " [" + str(round(i[1] * 100, 2)) + "]", (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
+                if i[0].decode() == 'person':
+                    x, y, w, h = i[2][0], i[2][1], i[2][2], i[2][3]
+                    xmin, ymin, xmax, ymax = convertBack(float(x), float(y), float(w), float(h))
+                    pt1 = (xmin, ymin)
+                    pt2 = (xmax, ymax)
+                    cv2.rectangle(img, pt1, pt2, (0, 255, 0), 2)
+                    # cv2.putText(img, i[0].decode() + " [" + str(round(i[1] * 100, 2)) + "]", (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
+                    cv2.putText(img, i[0].decode(), (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
+                    
+                    detected_people_list.append(detected_person(x_idx=int((xmax-xmin)/2), y_idx=int((ymax-ymin)/2), depth=1))
+            
+            if detected_people_list!=[]:
+                detected_people_list.sort(key=lambda d:d.depth)
+                print detected_people_list[0].x_idx, detected_people_list[0].y_idx, detected_people_list[0].depth
+            
             cv2.imshow("img", img)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
