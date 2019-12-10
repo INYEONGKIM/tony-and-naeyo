@@ -27,9 +27,7 @@ def getHorizontalCoordinate(x, distance):
     Hcenter = (width -1 ) /2 
     HPixel = HSize/(width - 1)
     HRatio = (x - width) * HPixel
-    return distance * HRatio   
-
-
+    return distance * HRatio
 
 # for darknet
 def sample(probs):
@@ -282,10 +280,14 @@ if __name__ == "__main__":
 
                     #measuring Bouding BOX distance
                 
-                    distance = depth_image[bbox[0]:bbox[2]+1, bbox[1]:bbox[3]+1].sum()/((bbox[3]-bbox[1])*(bbox[2]-bbox[0]))
+                    x_frag = bbox[2]-bbox[0]/5
+                    y_frag = bbox[3]-bbox[1]/5
+
+                    distance = depth_image[bbox[0]+2*x_frag:bbox[0]+3*x_frag, bbox[1]+2*y_frag:bbox[1]+3*y_frag].sum() / (x_frag*y_frag)
+
+                    # distance = depth_image[bbox[0]:bbox[2]+1, bbox[1]:bbox[3]+1].sum()/((bbox[3]-bbox[1])*(bbox[2]-bbox[0]))
                     distance = round(distance/1000,2)
                     # for realsense
-
 
 
                     # # cv2.circle(images, (300,300), 5, (0,0,255), -1)
@@ -300,12 +302,13 @@ if __name__ == "__main__":
                     # cv2.putText(img, i[0].decode() + " [" + str(round(i[1] * 100, 2)) + "]", (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
                     cv2.putText(img, i[0].decode(), (pt1[0], pt1[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, [0, 255, 0], 4)
 
-                    detected_people_list.append(detected_person(x_idx=int((xmax-xmin)/2), y_idx=int((ymax-ymin)/2), depth=distance))
-            
+                    detected_people_list.append(detected_person(x_idx=int(xmin+((xmax-xmin)/2)), y_idx=int(ymin+((ymax-ymin)/2)), depth=distance))
+
 
             if detected_people_list != []:
                 detected_people_list.sort(key=lambda d:d.depth)
                 print "x_center_idx =", detected_people_list[0].x_idx, " y_center_idx = ", detected_people_list[0].y_idx, " distance = ", detected_people_list[0].depth
+                cv2.circle(img,(detected_people_list[0].x_idx,detected_people_list[0].y_idx),10,(0,255,255),-1)
             
             cv2.imshow("img", img)
 
