@@ -40,11 +40,11 @@ while True:
         # decimg = cv2.imdecode(data, 1)
         # cv2.imshow('CLIENT', decimg)
 
-
         key = cv2.waitKey(10) & 0xff
         if key == 27:
             break
     except:
-        print "socket die"
+        # print "socket die"
+        pass
 
 cv2.destroyAllWindows()
